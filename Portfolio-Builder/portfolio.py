@@ -253,21 +253,25 @@ S_range = np.linspace(max(1.0, S0 * 0.3), S0 * 2.5, 2000)
 
 tab_payoff, tab_pnl = st.tabs(["Payoff at expiry", "P&L (t < T)"])
 
+# Toggle shared across both tabs — lives outside them so state persists when switching
+show_legs = st.toggle("Show individual legs", value=True)
+
 # Helper: plotly figure factory
-def make_figure(y_portfolio, y_legs, leg_labels, ylabel, title):
+def make_figure(y_portfolio, y_legs, leg_labels, ylabel, title, show_legs=True):
     fig = go.Figure()
 
-    # Individual legs — dashed, semi-transparent
-    for i, (y, lbl) in enumerate(zip(y_legs, leg_labels)):
-        color = LEG_COLORS[i % len(LEG_COLORS)]
-        fig.add_trace(go.Scatter(
-            x=S_range, y=y,
-            name=lbl,
-            mode="lines",
-            line=dict(color=color, width=1.4, dash="dash"),
-            opacity=0.75,
-            hovertemplate=f"<b>{lbl}</b><br>S=%{{x:.2f}}<br>{ylabel}=%{{y:.4f}}<extra></extra>",
-        ))
+    # Individual legs — dashed, semi-transparent (only when requested)
+    if show_legs:
+        for i, (y, lbl) in enumerate(zip(y_legs, leg_labels)):
+            color = LEG_COLORS[i % len(LEG_COLORS)]
+            fig.add_trace(go.Scatter(
+                x=S_range, y=y,
+                name=lbl,
+                mode="lines",
+                line=dict(color=color, width=1.4, dash="dash"),
+                opacity=0.75,
+                hovertemplate=f"<b>{lbl}</b><br>S=%{{x:.2f}}<br>{ylabel}=%{{y:.4f}}<extra></extra>",
+            ))
 
     # Portfolio net — solid, prominent
     fig.add_trace(go.Scatter(
@@ -318,7 +322,7 @@ with tab_payoff:
     y_net = portfolio.payoff(S_range)
     y_legs = [inst.payoff(S_range) for inst, _ in portfolio.legs]
     labels = [str(inst) for inst, _ in portfolio.legs]
-    fig = make_figure(y_net, y_legs, labels, "Payoff", "Portfolio payoff at expiry")
+    fig = make_figure(y_net, y_legs, labels, "Payoff", "Portfolio payoff at expiry", show_legs=show_legs)
     st.plotly_chart(fig, use_container_width=True)
 
     # Summary metrics
@@ -348,7 +352,8 @@ with tab_pnl:
     fig2 = make_figure(
         y_net_pnl, y_legs_pnl, labels,
         "P&L",
-        f"Portfolio P&L at t={t_val:.3f}y  (t/T = {t_frac:.0%})"
+        f"Portfolio P&L at t={t_val:.3f}y  (t/T = {t_frac:.0%})",
+        show_legs=show_legs,
     )
     st.plotly_chart(fig2, use_container_width=True)
 
