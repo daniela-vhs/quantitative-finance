@@ -285,11 +285,19 @@ def make_figure(y_portfolio, y_legs, leg_labels, ylabel, title):
     )
 
     fig.update_layout(
-        title=dict(text=title, font_size=14, x=0),
+        title=dict(text=title, font_size=14, x=0, xanchor="left", pad=dict(b=12)),
         xaxis=dict(title="S — underlying price", showgrid=True, gridcolor="#eeeeee"),
         yaxis=dict(title=ylabel, showgrid=True, gridcolor="#eeeeee", tickformat=".2f"),
-        legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="left", x=0),
-        margin=dict(l=60, r=20, t=60, b=50),
+        legend=dict(
+            orientation="v",
+            xanchor="right", x=0.99,
+            yanchor="top",   y=0.99,
+            bgcolor="rgba(255,255,255,0.8)",
+            bordercolor="#dddddd",
+            borderwidth=0.5,
+            font=dict(size=11),
+        ),
+        margin=dict(l=60, r=20, t=50, b=50),
         hovermode="x unified",
         plot_bgcolor="white",
         paper_bgcolor="rgba(0,0,0,0)",
