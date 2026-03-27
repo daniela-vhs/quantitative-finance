@@ -248,8 +248,13 @@ with col_t:
         help="Used for P&L tab only. 0 = now, →1 = near expiry."
     )
 
-# Wide default window; user zooms/pans directly on the Plotly chart
-S_range = np.linspace(max(1.0, S0 * 0.3), S0 * 2.5, 2000)
+# Compute a sensible S range: center around strikes if options present, else around S0
+strikes = [inst.K for inst, _ in portfolio.legs if hasattr(inst, "K")]
+anchors = strikes + [S0]
+s_center = np.mean(anchors)
+s_lo = 0.0
+s_hi = max(anchors) * 1.3
+S_range = np.linspace(1e-6, s_hi, 2000)
 
 tab_payoff, tab_pnl = st.tabs(["Payoff at expiry", "P&L (t < T)"])
 
