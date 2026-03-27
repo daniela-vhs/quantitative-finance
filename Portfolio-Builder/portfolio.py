@@ -132,10 +132,9 @@ class Portfolio:
     def __init__(self):
         self.legs = []  # list of (instrument, cost_basis)
 
-    def add(self, instrument):
-        S_mid = 100.0  # placeholder spot for cost basis
+    def add(self, instrument, S0=100.0):
         try:
-            basis = instrument.value(np.array([S_mid]), t=0)[0]
+            basis = float(instrument.value(np.array([S0]), t=0)[0])
         except Exception:
             basis = 0.0
         self.legs.append((instrument, basis))
@@ -161,6 +160,8 @@ st.title("Derivatives portfolio builder")
 # Session state
 if "portfolio" not in st.session_state:
     st.session_state.portfolio = Portfolio()
+if "S0" not in st.session_state:
+    st.session_state.S0 = 100.0
 
 portfolio: Portfolio = st.session_state.portfolio
 
@@ -205,7 +206,7 @@ with st.sidebar:
                 inst = Underlying(qty)
             case "ZCB":
                 inst = ZCB(r, T, qty)
-        portfolio.add(inst)
+        portfolio.add(inst, S0=st.session_state.S0)
         st.rerun()
 
     # ── Portfolio legs ────────────────────────────────────────────────────────
@@ -234,7 +235,12 @@ if not portfolio.legs:
 # Controls above chart
 col_s, col_t = st.columns([2, 3])
 with col_s:
-    S0 = st.number_input("S₀ — current spot", value=100.0, step=1.0)
+    S0 = st.number_input(
+        "S₀ — current spot",
+        value=st.session_state.S0,
+        step=1.0,
+        key="S0",
+    )
 with col_t:
     t_frac = st.slider(
         "t — time elapsed (fraction of T)",
