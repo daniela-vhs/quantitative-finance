@@ -1,7 +1,7 @@
 import numpy as np
 import plotly.graph_objects as go
-import streamlit as st
 from scipy.stats import norm
+import streamlit as st
 
 LEG_COLORS = [
     "#378ADD", "#E24B4A", "#EF9F27", "#A855F7",
@@ -232,7 +232,7 @@ if not portfolio.legs:
     st.stop()
 
 # Controls above chart
-col_s, col_t, col_range = st.columns([2, 2, 3])
+col_s, col_t = st.columns([2, 3])
 with col_s:
     S0 = st.number_input("S₀ — current spot", value=100.0, step=1.0)
 with col_t:
@@ -241,15 +241,9 @@ with col_t:
         0.0, 0.999, 0.5, 0.01,
         help="Used for P&L tab only. 0 = now, →1 = near expiry."
     )
-with col_range:
-    s_lo, s_hi = st.slider(
-        "S range for chart",
-        min_value=1.0, max_value=500.0,
-        value=(max(1.0, S0 * 0.5), S0 * 1.5),
-        step=1.0,
-    )
 
-S_range = np.linspace(s_lo, s_hi, 2000)
+# Wide default window; user zooms/pans directly on the Plotly chart
+S_range = np.linspace(max(1.0, S0 * 0.3), S0 * 2.5, 2000)
 
 tab_payoff, tab_pnl = st.tabs(["Payoff at expiry", "P&L (t < T)"])
 
@@ -300,6 +294,8 @@ def make_figure(y_portfolio, y_legs, leg_labels, ylabel, title):
         plot_bgcolor="white",
         paper_bgcolor="rgba(0,0,0,0)",
         height=430,
+        # Preserve zoom/pan state when Streamlit rerenders (e.g. t slider moves)
+        uirevision="portfolio",
     )
     return fig
 
