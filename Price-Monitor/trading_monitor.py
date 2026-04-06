@@ -20,10 +20,39 @@ def load_prices_data(day):
 def load_trades_data(day):
     """Load trades data for a specific day"""
     file_path = f'data/trades_round_0_day_{day}.csv'
+    
+    # Debug: Check if file exists
+    import os
+    if not os.path.exists(file_path):
+        st.error(f"❌ File not found: {file_path}")
+        st.info(f"📁 Looking for file at: {os.path.abspath(file_path)}")
+        return None
+    
     try:
+        # Try with semicolon separator first
         df = pd.read_csv(file_path, sep=';')
+        
+        if df.empty:
+            st.warning(f"⚠️ File {file_path} is empty")
+            return None
+            
+        # Check if we have the expected columns
+        expected_cols = ['timestamp', 'symbol', 'price', 'quantity']
+        missing_cols = [col for col in expected_cols if col not in df.columns]
+        
+        if missing_cols:
+            st.warning(f"⚠️ Missing columns: {missing_cols}")
+            st.info(f"📊 Found columns: {list(df.columns)}")
+            
+            # Try comma separator instead
+            df = pd.read_csv(file_path, sep=',')
+            st.success("✅ Loaded with comma separator instead")
+        
         return df
-    except:
+        
+    except Exception as e:
+        st.error(f"❌ Error loading {file_path}: {str(e)}")
+        st.info(f"💡 Try checking the file format and separator")
         return None
 
 # Day selector
