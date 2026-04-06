@@ -3,7 +3,3 @@ plotly
 pandas
 numpy
 scipy
-data/prices_round_0_day_-1.csv
-data/prices_round_0_day_-2.csv
-data/trades_round_0_day_-1.csv
-data/trades_round_0_day_-1.csv
