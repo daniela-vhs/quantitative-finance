@@ -170,67 +170,141 @@ def render_order_book(product_name, row_data):
         ask_df = pd.DataFrame(ask_data)
         st.dataframe(ask_df, hide_index=True, use_container_width=True)
     
-    # Chart
-    st.markdown("#### 📊 Order Book Visualization")
+    # Time series evolution charts
+    st.markdown("#### 📈 Market Evolution (up to current time)")
     
-    bid_prices = []
-    bid_volumes = []
-    ask_prices = []
-    ask_volumes = []
+    # Filter data up to current timestamp  
+    historical_data = df_prices[
+        (df_prices['product'] == product_name) & 
+        (df_prices['timestamp'] <= timestamp)
+    ].copy()
     
-    for i in range(1, 4):
-        bid_price = row_data[f'bid_price_{i}']
-        bid_volume = row_data[f'bid_volume_{i}']
-        ask_price = row_data[f'ask_price_{i}']
-        ask_volume = row_data[f'ask_volume_{i}']
+    if len(historical_data) > 1:
+        # Calculate spread
+        historical_data['spread'] = historical_data['ask_price_1'] - historical_data['bid_price_1']
+        historical_data['spread_pct'] = (historical_data['spread'] / historical_data['mid_price']) * 100
         
-        if pd.notna(bid_price) and pd.notna(bid_volume) and bid_price != '' and bid_volume != '':
-            bid_prices.append(float(bid_price))
-            bid_volumes.append(float(bid_volume))
+        # 1. Mid Price Evolution (full width)
+        fig_price = go.Figure()
         
-        if pd.notna(ask_price) and pd.notna(ask_volume) and ask_price != '' and ask_volume != '':
-            ask_prices.append(float(ask_price))
-            ask_volumes.append(float(ask_volume))
-    
-    if bid_prices or ask_prices:
-        fig = go.Figure()
+        # Add bid/ask ribbon
+        fig_price.add_trace(go.Scatter(
+            x=historical_data['timestamp'],
+            y=historical_data['ask_price_1'],
+            fill=None,
+            mode='lines',
+            line=dict(width=0),
+            showlegend=False,
+            hoverinfo='skip'
+        ))
         
-        # Bids (red bars, to the left)
-        if bid_prices:
-            fig.add_trace(go.Bar(
-                y=bid_prices,
-                x=[-v for v in bid_volumes],
-                orientation='h',
-                name='Bid',
-                marker_color='rgb(239, 68, 68)',
-                text=bid_volumes,
-                textposition='auto',
-            ))
+        fig_price.add_trace(go.Scatter(
+            x=historical_data['timestamp'],
+            y=historical_data['bid_price_1'],
+            fill='tonexty',
+            mode='lines',
+            line=dict(width=0),
+            fillcolor='rgba(78, 205, 196, 0.2)',
+            name='Bid-Ask Range',
+            hoverinfo='skip'
+        ))
         
-        # Asks (green bars, to the right)
-        if ask_prices:
-            fig.add_trace(go.Bar(
-                y=ask_prices,
-                x=ask_volumes,
-                orientation='h',
-                name='Ask',
-                marker_color='rgb(34, 197, 94)',
-                text=ask_volumes,
-                textposition='auto',
-            ))
+        # Add mid price line (thinner)
+        fig_price.add_trace(go.Scatter(
+            x=historical_data['timestamp'],
+            y=historical_data['mid_price'],
+            mode='lines',
+            name='Mid Price',
+            line=dict(color='#FFD93D', width=1.5),
+            hovertemplate='<b>Time:</b> %{x}<br><b>Mid Price:</b> %{y:.2f}<extra></extra>'
+        ))
         
-        fig.update_layout(
-            xaxis_title='Volume',
+        # Add current timestamp marker
+        current_mid = historical_data.iloc[-1]['mid_price']
+        fig_price.add_trace(go.Scatter(
+            x=[timestamp],
+            y=[current_mid],
+            mode='markers',
+            marker=dict(size=8, color='red'),
+            name='Current',
+            showlegend=False,
+            hovertemplate='<b>Current</b><br><b>Mid Price:</b> %{y:.2f}<extra></extra>'
+        ))
+        
+        fig_price.update_layout(
+            title='💰 Mid Price Evolution',
+            height=300,
+            xaxis_title='Timestamp',
             yaxis_title='Price',
-            barmode='overlay',
-            height=350,
-            showlegend=True,
-            margin=dict(l=20, r=20, t=20, b=20)
+            hovermode='x unified',
+            margin=dict(l=40, r=40, t=40, b=40)
         )
         
-        st.plotly_chart(fig, use_container_width=True)
+        st.plotly_chart(fig_price, use_container_width=True, key=f'price_{product_name}')
+        
+        # 2. Liquidity depth evolution (full width)
+        historical_data['total_bid_volume'] = (
+            historical_data['bid_volume_1'].fillna(0) + 
+            historical_data['bid_volume_2'].fillna(0) + 
+            historical_data['bid_volume_3'].fillna(0)
+        )
+        
+        historical_data['total_ask_volume'] = (
+            historical_data['ask_volume_1'].fillna(0) + 
+            historical_data['ask_volume_2'].fillna(0) + 
+            historical_data['ask_volume_3'].fillna(0)
+        )
+        
+        fig_depth = go.Figure()
+        
+        fig_depth.add_trace(go.Scatter(
+            x=historical_data['timestamp'],
+            y=historical_data['total_bid_volume'],
+            mode='lines',
+            name='Bid Depth',
+            line=dict(color='#FF6B6B', width=1),
+            fill='tozeroy',
+            fillcolor='rgba(255, 107, 107, 0.3)',
+            hovertemplate='<b>Time:</b> %{x}<br><b>Bid Volume:</b> %{y}<extra></extra>'
+        ))
+        
+        fig_depth.add_trace(go.Scatter(
+            x=historical_data['timestamp'],
+            y=historical_data['total_ask_volume'],
+            mode='lines',
+            name='Ask Depth',
+            line=dict(color='#4ECDC4', width=1),
+            fill='tozeroy',
+            fillcolor='rgba(78, 205, 196, 0.3)',
+            hovertemplate='<b>Time:</b> %{x}<br><b>Ask Volume:</b> %{y}<extra></extra>'
+        ))
+        
+        # Add current timestamp marker
+        current_bid_vol = historical_data.iloc[-1]['total_bid_volume']
+        current_ask_vol = historical_data.iloc[-1]['total_ask_volume']
+        
+        fig_depth.add_trace(go.Scatter(
+            x=[timestamp, timestamp],
+            y=[current_bid_vol, current_ask_vol],
+            mode='markers',
+            marker=dict(size=8, color='red'),
+            showlegend=False,
+            hovertemplate='<b>Current</b><extra></extra>'
+        ))
+        
+        fig_depth.update_layout(
+            title='💧 Total Liquidity Depth',
+            height=280,
+            xaxis_title='Timestamp',
+            yaxis_title='Total Volume',
+            hovermode='x unified',
+            margin=dict(l=40, r=40, t=40, b=40)
+        )
+        
+        st.plotly_chart(fig_depth, use_container_width=True, key=f'depth_{product_name}')
+    
     else:
-        st.warning("Not enough data to display order book chart")
+        st.info("📊 Not enough historical data for time series analysis")
 
 # Timestamp selector
 min_ts = int(df_prices['timestamp'].min())
