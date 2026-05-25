@@ -360,11 +360,11 @@ with st.sidebar:
     has_r   = inst_type in ("Option / Barrier", "Digital call", "ZCB", "Underlying")
     has_q   = inst_type in ("Option / Barrier", "Digital call", "Underlying")
 
-    if has_K:   K     = st.number_input("K — strike", value=100.0, step=1.0)
-    if has_sig: sigma = st.slider("σ — volatility", 0.05, 1.0, 0.20, 0.01, format="%.2f")
-    if has_T:   T     = st.number_input("T — maturity (years)", value=1.0, step=0.25, min_value=0.01)
-    if has_r:   r     = st.slider("r — risk-free rate", 0.0, 0.15, 0.03, 0.005, format="%.3f")
-    if has_q:   q     = st.slider("q — dividend yield", 0.0, 0.10, 0.0, 0.005, format="%.3f")
+    if has_K:   K     = st.number_input("K — strike", value=100.0, step=1.0, format="%.4f")
+    if has_sig: sigma = st.number_input("σ — volatility", value=0.2000, step=0.0001, format="%.4f", min_value=0.0001)
+    if has_T:   T     = st.number_input("T — maturity (years)", value=1.0000, step=0.0001, format="%.4f", min_value=0.0001)
+    if has_r:   r     = st.number_input("r — risk-free rate", value=0.0300, step=0.0001, format="%.4f")
+    if has_q:   q     = st.number_input("q — dividend yield", value=0.0000, step=0.0001, format="%.4f", min_value=0.0)
 
     if inst_type == "Option / Barrier":
         opt_type = st.radio("Option type", ["call", "put"], horizontal=True)
