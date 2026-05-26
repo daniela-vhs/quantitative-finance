@@ -420,7 +420,7 @@ with col_s:
     S0 = st.number_input("S₀ — current spot", step=1.0, key="S0")
 with col_t:
     t_frac = st.slider("t — time elapsed (fraction of T)",
-                       0.0, 0.999, 0.5, 0.01,
+                       0.0, 0.999, 0.0, 0.01,
                        help="Applies to P&L and Greeks tabs.")
 
 # Dynamic S range
@@ -452,11 +452,11 @@ toggle_col1, toggle_col2 = st.columns([2, 3])
 with toggle_col1:
     show_legs = st.toggle("Show individual legs", value=True)
 with toggle_col2:
-    buyer_view = st.toggle("Buyer's view  (flip sign)", value=False,
-                           help="Multiplies all values by −1. Issuer's view is the default.")
+    issuer_view = st.toggle("Issuer's view  (flip sign)", value=False,
+                            help="Multiplies all values by −1. Buyer's view is the default.")
 
-sign = -1.0 if buyer_view else 1.0
-view_label = "Buyer" if buyer_view else "Issuer"
+sign = -1.0 if issuer_view else 1.0
+view_label = "Issuer" if issuer_view else "Buyer"
 
 # ── Figure factory ────────────────────────────────────────────────────────────
 def _base_layout(title, ylabel, height=420, uirev="portfolio"):
