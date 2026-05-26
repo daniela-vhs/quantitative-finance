@@ -447,7 +447,16 @@ barrier_vlines = [
 ]
 
 tab_payoff, tab_pnl, tab_greeks = st.tabs(["Payoff at expiry", "P&L (t < T)", "Greeks"])
-show_legs = st.toggle("Show individual legs", value=True)
+
+toggle_col1, toggle_col2 = st.columns([2, 3])
+with toggle_col1:
+    show_legs = st.toggle("Show individual legs", value=True)
+with toggle_col2:
+    buyer_view = st.toggle("Buyer's view  (flip sign)", value=False,
+                           help="Multiplies all values by −1. Issuer's view is the default.")
+
+sign = -1.0 if buyer_view else 1.0
+view_label = "Buyer" if buyer_view else "Issuer"
 
 # ── Figure factory ────────────────────────────────────────────────────────────
 def _base_layout(title, ylabel, height=420, uirev="portfolio"):
@@ -503,12 +512,13 @@ def make_figure(y_portfolio, y_legs, leg_labels, ylabel, title,
 
 # ── Tab 1: Payoff ─────────────────────────────────────────────────────────────
 with tab_payoff:
-    y_net  = structure.payoff(S_range)
-    y_legs = [inst.payoff(S_range) for inst, _ in structure.legs]
+    y_net  = structure.payoff(S_range) * sign
+    y_legs = [inst.payoff(S_range) * sign for inst, _ in structure.legs]
     labels = [str(inst) for inst, _ in structure.legs]
     st.plotly_chart(
         make_figure(y_net, y_legs, labels, "Payoff",
-                    "Portfolio payoff at expiry", show_legs, barrier_vlines),
+                    f"Portfolio payoff at expiry  [{view_label}]",
+                    show_legs, barrier_vlines),
         use_container_width=True)
 
     mc1, mc2, mc3, mc4 = st.columns(4)
@@ -520,12 +530,12 @@ with tab_payoff:
 
 # ── Tab 2: P&L ────────────────────────────────────────────────────────────────
 with tab_pnl:
-    y_pnl      = structure.pnl(S_range, t_val)
-    y_legs_pnl = [inst.pnl(S_range, basis, t_val) for inst, basis in structure.legs]
+    y_pnl      = structure.pnl(S_range, t_val) * sign
+    y_legs_pnl = [inst.pnl(S_range, basis, t_val) * sign for inst, basis in structure.legs]
     labels     = [str(inst) for inst, _ in structure.legs]
     st.plotly_chart(
         make_figure(y_pnl, y_legs_pnl, labels, "P&L",
-                    f"Portfolio P&L  t={t_val:.3f}y  (t/T={t_frac:.0%})",
+                    f"Portfolio P&L  t={t_val:.3f}y  (t/T={t_frac:.0%})  [{view_label}]",
                     show_legs, barrier_vlines),
         use_container_width=True)
 
@@ -545,7 +555,7 @@ with tab_greeks:
         ("volga", "Volga",    "d²V/dσ²"),
     ]
 
-    greek_values = {k: getattr(structure, k)(S_range, t=t_val) for k, *_ in GREEKS}
+    greek_values = {k: getattr(structure, k)(S_range, t=t_val) * sign for k, *_ in GREEKS}
 
     fig_g = make_subplots(
         rows=3, cols=2,
