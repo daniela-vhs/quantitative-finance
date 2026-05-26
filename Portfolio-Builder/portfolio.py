@@ -341,7 +341,7 @@ st.title("Derivatives portfolio builder")
 if "structure" not in st.session_state:
     st.session_state.structure = Structure()
 if "S0" not in st.session_state:
-    st.session_state["S0"] = 100.0
+    st.session_state["S0"] = 76.48
 
 structure: Structure = st.session_state.structure
 
@@ -360,11 +360,11 @@ with st.sidebar:
     has_r   = inst_type in ("Option / Barrier", "Digital call", "ZCB", "Underlying")
     has_q   = inst_type in ("Option / Barrier", "Digital call", "Underlying")
 
-    if has_K:   K     = st.number_input("K — strike", value=100.0, step=1.0, format="%.5f")
-    if has_sig: sigma = st.number_input("σ — volatility", value=0.20000, step=0.00001, format="%.5f", min_value=0.00001)
-    if has_T:   T     = st.number_input("T — maturity (years)", value=1.00000, step=0.00001, format="%.5f", min_value=0.00001)
-    if has_r:   r     = st.number_input("r — risk-free rate", value=0.03000, step=0.00001, format="%.5f")
-    if has_q:   q     = st.number_input("q — dividend yield", value=0.00000, step=0.00001, format="%.5f", min_value=0.0)
+    if has_K:   K     = st.number_input("K — strike", value=93.28000, step=1.0, format="%.5f")
+    if has_sig: sigma = st.number_input("σ — volatility", value=0.19260, step=0.00001, format="%.5f", min_value=0.00001)
+    if has_T:   T     = st.number_input("T — maturity (years)", value=1.45480, step=0.00001, format="%.5f", min_value=0.00001)
+    if has_r:   r     = st.number_input("r — risk-free rate", value=0.00233, step=0.00001, format="%.5f")
+    if has_q:   q     = st.number_input("q — dividend yield", value=0.04140, step=0.00001, format="%.5f", min_value=0.0)
 
     if inst_type == "Option / Barrier":
         opt_type = st.radio("Option type", ["call", "put"], horizontal=True)
@@ -374,7 +374,7 @@ with st.sidebar:
     if inst_type == "Option / Barrier":
         use_barrier = st.toggle("Add barrier", value=False)
         if use_barrier:
-            H     = st.number_input("H — barrier level", value=80.0, step=1.0)
+            H     = st.number_input("H — barrier level", value=62.19, step=1.0)
             knock = st.radio("Knock", ["out", "in"], horizontal=True)
             d = True
             if abs(H - K) < 1e-8:
@@ -417,7 +417,8 @@ if not structure.legs:
 
 col_s, col_t, col_v = st.columns([2, 3, 1])
 with col_s:
-    S0 = st.number_input("S₀ — current spot", step=1.0, key="S0")
+    S0 = st.number_input("S₀ — current spot", value=st.session_state["S0"],
+                         step=1.0, key="S0", format="%.2f")
 with col_t:
     t_frac = st.slider("t — time elapsed (fraction of T)",
                        0.0, 0.999, 0.0, 0.01,
