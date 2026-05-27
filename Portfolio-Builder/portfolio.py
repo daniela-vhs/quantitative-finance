@@ -345,7 +345,7 @@ class Structure:
 
 # ── Streamlit app ─────────────────────────────────────────────────────────────
 
-st.set_page_config(page_title="Portfolio Builder", layout="wide")
+st.set_page_config(page_title="Portfolio Builder", page_icon="📈", layout="wide")
 if "structure" not in st.session_state:
     st.session_state.structure = Structure()
 if "S0" not in st.session_state:
