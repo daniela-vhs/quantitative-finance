@@ -480,7 +480,7 @@ with col_v:
         float(inst.value(np.array([S0]), t=t_val)[0])
         for inst, _ in structure.value_legs
     ) * sign
-    st.metric("Value @ S₀", f"{current_value:.2f}")
+    st.metric("Value @ S₀", f"{current_value:.3f}")
 
 # ── Figure factory ────────────────────────────────────────────────────────────
 def _base_layout(title, ylabel, height=420, uirev="portfolio"):
