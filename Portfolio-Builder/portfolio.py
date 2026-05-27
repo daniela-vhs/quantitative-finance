@@ -302,18 +302,28 @@ class DigitalOption(Instrument):
 
 class Structure:
     def __init__(self):
-        self.legs: list[tuple[Instrument, float]] = []
+        # each entry: (instrument, cost_basis, active)
+        self.legs: list[tuple[Instrument, float, bool]] = []
 
     def add(self, instrument: Instrument, S0: float = 100.0):
         try:
             basis = float(instrument.value(np.array([S0], dtype=float), t=0)[0])
         except Exception:
             basis = 0.0
-        self.legs.append((instrument, basis))
+        self.legs.append((instrument, basis, True, True))
+
+    @property
+    def active_legs(self):
+        return [(inst, basis) for inst, basis, active, _ in self.legs if active]
+
+    @property
+    def value_legs(self):
+        """Active legs that also count toward Value @ S₀."""
+        return [(inst, basis) for inst, basis, active, in_val in self.legs if active and in_val]
 
     def _agg(self, method, S, **kw):
         out = np.zeros_like(S, dtype=float)
-        for inst, _ in self.legs:
+        for inst, _ in self.active_legs:
             out += getattr(inst, method)(S, **kw)
         return out
 
@@ -328,7 +338,7 @@ class Structure:
 
     def pnl(self, S, t):
         out = np.zeros_like(S, dtype=float)
-        for inst, basis in self.legs:
+        for inst, basis in self.active_legs:
             out += inst.pnl(S, basis, t)
         return out
 
@@ -336,12 +346,12 @@ class Structure:
 # ── Streamlit app ─────────────────────────────────────────────────────────────
 
 st.set_page_config(page_title="Portfolio Builder", layout="wide")
-st.title("Derivatives portfolio builder")
-
 if "structure" not in st.session_state:
     st.session_state.structure = Structure()
 if "S0" not in st.session_state:
     st.session_state["S0"] = 76.48
+if "S0_init" not in st.session_state:
+    st.session_state["S0_init"] = True
 
 structure: Structure = st.session_state.structure
 
@@ -397,11 +407,20 @@ with st.sidebar:
     if structure.legs:
         st.divider()
         st.caption("Current legs")
+        # headers
+        h1, h2, h3, h4 = st.columns([4, 1, 1, 1])
+        h2.caption("📈")
+        h3.caption("💲")
         to_remove = None
-        for i, (inst, _) in enumerate(structure.legs):
-            c1, c2 = st.columns([5, 1])
+        for i, (inst, basis, active, in_val) in enumerate(structure.legs):
+            c1, c2, c3, c4 = st.columns([4, 1, 1, 1])
             c1.caption(str(inst))
-            if c2.button("✕", key=f"rm_{i}"):
+            new_active = c2.checkbox("", value=active, key=f"act_{i}")
+            new_in_val = c3.checkbox("", value=in_val, key=f"val_{i}")
+            if new_active != active or new_in_val != in_val:
+                structure.legs[i] = (inst, basis, new_active, new_in_val)
+                st.rerun()
+            if c4.button("✕", key=f"rm_{i}"):
                 to_remove = i
         if to_remove is not None:
             structure.legs.pop(to_remove)
@@ -417,7 +436,8 @@ if not structure.legs:
 
 col_s, col_t, col_v = st.columns([2, 3, 1])
 with col_s:
-    S0 = st.number_input("S₀ — current spot", value=st.session_state["S0"],
+    _s0_default = st.session_state.get("S0", 76.48)
+    S0 = st.number_input("S₀ — current spot", value=_s0_default,
                          step=1.0, key="S0", format="%.2f")
 with col_t:
     t_frac = st.slider("t — time elapsed (fraction of T)",
@@ -425,25 +445,21 @@ with col_t:
                        help="Applies to P&L and Greeks tabs.")
 
 # Dynamic S range
-strikes  = [inst.K for inst, _ in structure.legs if hasattr(inst, "K")]
-barriers = [inst.H for inst, _ in structure.legs
+strikes  = [inst.K for inst, _ in structure.active_legs if hasattr(inst, "K")]
+barriers = [inst.H for inst, _ in structure.active_legs
             if hasattr(inst, "H") and inst.H is not None]
 anchors  = strikes + barriers + [S0]
 s_hi     = max(anchors) * 1.3
 S_range  = np.linspace(1e-6, s_hi, 2000)
 
-T_ref = next((inst.T for inst, _ in structure.legs if hasattr(inst, "T")), 1.0)
+T_ref = next((inst.T for inst, _ in structure.active_legs if hasattr(inst, "T")), 1.0)
 t_val = t_frac * T_ref
 idx0  = int(np.searchsorted(S_range, S0))
-
-with col_v:
-    current_value = float(structure.value(np.array([S0]), t=t_val)[0])
-    st.metric("Value @ S₀", f"{current_value:.4f}")
 
 # Barrier vlines reused across tabs
 barrier_vlines = [
     (inst.H, f"H={inst.H}", "#E24B4A")
-    for inst, _ in structure.legs
+    for inst, _ in structure.active_legs
     if hasattr(inst, "H") and inst.H is not None
 ]
 
@@ -458,6 +474,13 @@ with toggle_col2:
 
 sign = -1.0 if issuer_view else 1.0
 view_label = "Issuer" if issuer_view else "Buyer"
+
+with col_v:
+    current_value = sum(
+        float(inst.value(np.array([S0]), t=t_val)[0])
+        for inst, _ in structure.value_legs
+    ) * sign
+    st.metric("Value @ S₀", f"{current_value:.2f}")
 
 # ── Figure factory ────────────────────────────────────────────────────────────
 def _base_layout(title, ylabel, height=420, uirev="portfolio"):
@@ -514,8 +537,8 @@ def make_figure(y_portfolio, y_legs, leg_labels, ylabel, title,
 # ── Tab 1: Payoff ─────────────────────────────────────────────────────────────
 with tab_payoff:
     y_net  = structure.payoff(S_range) * sign
-    y_legs = [inst.payoff(S_range) * sign for inst, _ in structure.legs]
-    labels = [str(inst) for inst, _ in structure.legs]
+    y_legs = [inst.payoff(S_range) * sign for inst, _ in structure.active_legs]
+    labels = [str(inst) for inst, _ in structure.active_legs]
     st.plotly_chart(
         make_figure(y_net, y_legs, labels, "Payoff",
                     f"Portfolio payoff at expiry  [{view_label}]",
@@ -523,27 +546,22 @@ with tab_payoff:
         use_container_width=True)
 
     mc1, mc2, mc3, mc4 = st.columns(4)
-    mc1.metric("Payoff @ S₀",  f"{y_net[idx0]:.4f}")
-    mc2.metric("Max payoff",   f"{y_net.max():.4f}")
-    mc3.metric("Min payoff",   f"{y_net.min():.4f}")
     be = S_range[np.where(np.diff(np.sign(y_net)))[0]]
+    mc1.metric("Payoff @ S₀", f"{y_net[idx0]:.2f}")
+    mc2.metric("Max payoff",  f"{y_net.max():.2f}")
+    mc3.metric("Min payoff",  f"{y_net.min():.2f}")
     mc4.metric("Break-even(s)", "  |  ".join(f"{b:.2f}" for b in be) if len(be) else "—")
 
 # ── Tab 2: P&L ────────────────────────────────────────────────────────────────
 with tab_pnl:
     y_pnl      = structure.pnl(S_range, t_val) * sign
-    y_legs_pnl = [inst.pnl(S_range, basis, t_val) * sign for inst, basis in structure.legs]
-    labels     = [str(inst) for inst, _ in structure.legs]
+    y_legs_pnl = [inst.pnl(S_range, basis, t_val) * sign for inst, basis in structure.active_legs]
+    labels     = [str(inst) for inst, _ in structure.active_legs]
     st.plotly_chart(
         make_figure(y_pnl, y_legs_pnl, labels, "P&L",
                     f"Portfolio P&L  t={t_val:.3f}y  (t/T={t_frac:.0%})  [{view_label}]",
                     show_legs, barrier_vlines),
         use_container_width=True)
-
-    mc1, mc2, mc3 = st.columns(3)
-    mc1.metric("P&L @ S₀", f"{y_pnl[idx0]:.4f}")
-    mc2.metric("Max P&L",  f"{y_pnl.max():.4f}")
-    mc3.metric("Min P&L",  f"{y_pnl.min():.4f}")
 
 # ── Tab 3: Greeks ─────────────────────────────────────────────────────────────
 with tab_greeks:
