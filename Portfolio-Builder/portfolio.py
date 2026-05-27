@@ -467,7 +467,7 @@ tab_payoff, tab_pnl, tab_greeks = st.tabs(["Payoff at expiry", "P&L (t < T)", "G
 
 toggle_col1, toggle_col2 = st.columns([2, 3])
 with toggle_col1:
-    show_legs = st.toggle("Show individual legs", value=True)
+    show_legs = st.toggle("Show individual legs", value=False)
 with toggle_col2:
     issuer_view = st.toggle("Issuer's view  (flip sign)", value=False,
                             help="Multiplies all values by −1. Buyer's view is the default.")
