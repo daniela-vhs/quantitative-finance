@@ -349,7 +349,7 @@ st.set_page_config(page_title="Portfolio Builder", page_icon="📈", layout="wid
 if "structure" not in st.session_state:
     st.session_state.structure = Structure()
 if "S0" not in st.session_state:
-    st.session_state["S0"] = 50.0
+    st.session_state["S0"] = 27.0
 if "S0_init" not in st.session_state:
     st.session_state["S0_init"] = True
 
