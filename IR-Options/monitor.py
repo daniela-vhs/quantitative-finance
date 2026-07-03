@@ -61,7 +61,7 @@ def load_rates():
 @st.cache_data
 def load_conventions():
     convs = {}
-    for name, fname in [("ESTR", "estr.json"), ("EURIBOR6M", "euribor6m.json")]:
+    for name, fname in [("ESTR", "estr.json"), ("EURIBOR6M", "euribor6m.json"), ("VOL_SURFACE", "vol_surface.json")]:
         path = os.path.join("market_conventions", fname)
         if os.path.exists(path):
             with open(path) as f:
@@ -394,6 +394,84 @@ with tab_conv:
             st.markdown(f'<span class="section-label">{curve_name} — {len(instruments_df)} instruments</span>',
                         unsafe_allow_html=True)
             st.dataframe(instruments_df, use_container_width=True, height=400)
+
+    # Vol surface conventions
+    st.markdown("<div style='margin-top:1.5rem;'></div>", unsafe_allow_html=True)
+    st.markdown('<span class="section-label">Cap vol surface</span>', unsafe_allow_html=True)
+
+    if "VOL_SURFACE" in conventions:
+        vs = conventions["VOL_SURFACE"]
+
+        vs_col1, vs_col2 = st.columns(2, gap="large")
+
+        with vs_col1:
+            # Overview card
+            overview_keys = ["surface", "vol_unit", "underlying_index", "discounting",
+                             "settlement", "reset_freq", "day_count"]
+            overview_rows = "".join(
+                f"<div class='conv-row'><span class='conv-key'>{k}</span><span class='conv-val'>{vs.get(k, '—')}</span></div>"
+                for k in overview_keys
+            )
+            dr = vs.get("date_range", {})
+            date_rows = "".join(
+                f"<div class='conv-row'><span class='conv-key'>{k}</span><span class='conv-val'>{dr.get(k, '—')}</span></div>"
+                for k in ["start", "end", "frequency", "n_obs"]
+            )
+            st.markdown(f"""
+            <div class='conv-card'>
+              <div class='conv-title'>Overview</div>
+              {overview_rows}
+            </div>
+            <div class='conv-card'>
+              <div class='conv-title'>Date range</div>
+              {date_rows}
+            </div>
+            """, unsafe_allow_html=True)
+
+            tenors = vs.get("tenors_years", [])
+            st.markdown(f"""
+            <div class='conv-card'>
+              <div class='conv-title'>Tenors ({len(tenors)})</div>
+              <div style='font-family: JetBrains Mono, monospace; font-size: 0.72rem; color: #374151; line-height: 2;'>
+                {" · ".join(f"{t}Y" for t in tenors)}
+              </div>
+            </div>
+            """, unsafe_allow_html=True)
+
+        with vs_col2:
+            # Strikes table
+            strikes = vs.get("strikes", [])
+            strike_rows = ""
+            for s in strikes:
+                label = s["strike_label"]
+                stype = s["strike_type"]
+                val   = f"{s['strike_value_pct']:+.3f}%" if s["strike_value_pct"] is not None else "date-dependent"
+                n_tickers = len(s.get("tickers", {}))
+                strike_rows += f"""
+                <div class='conv-row'>
+                  <span class='conv-key'>{label}</span>
+                  <span class='conv-val'>{val} &nbsp;<span style='color:#9ca3af;font-weight:400;'>({stype}, {n_tickers} tickers)</span></span>
+                </div>"""
+
+            st.markdown(f"""
+            <div class='conv-card'>
+              <div class='conv-title'>Strikes ({len(strikes)})</div>
+              {strike_rows}
+            </div>
+            """, unsafe_allow_html=True)
+
+            # Ticker table for selected strike
+            strike_labels_list = [s["strike_label"] for s in strikes]
+            selected_strike_label = st.selectbox(
+                "Strike tickers", strike_labels_list,
+                label_visibility="collapsed", key="strike_ticker_sel"
+            )
+            selected_strike = next(s for s in strikes if s["strike_label"] == selected_strike_label)
+            ticker_df = pd.DataFrame(
+                [(k, v) for k, v in selected_strike["tickers"].items()],
+                columns=["Tenor", "Bloomberg ticker"]
+            )
+            st.dataframe(ticker_df, use_container_width=True, height=340)
 
 # ── Footer ────────────────────────────────────────────────────────────────────
 st.markdown(f"""
