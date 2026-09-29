@@ -370,9 +370,9 @@ with st.sidebar:
     has_r   = inst_type in ("Option / Barrier", "Digital call", "ZCB", "Underlying")
     has_q   = inst_type in ("Option / Barrier", "Digital call", "Underlying")
 
-    if has_K:   K     = st.number_input("K — strike", value=120, step=1.0, format="%.5f")
+    if has_K:   K     = st.number_input("K — strike", value=120.0, step=1.0, format="%.5f")
     if has_sig: sigma = st.number_input("σ — volatility", value=0.20, step=0.00001, format="%.5f", min_value=0.00001)
-    if has_T:   T     = st.number_input("T — maturity (years)", value=5, step=0.00001, format="%.5f", min_value=0.00001)
+    if has_T:   T     = st.number_input("T — maturity (years)", value=5.0, step=0.00001, format="%.5f", min_value=0.00001)
     if has_r:   r     = st.number_input("r — risk-free rate", value=0.03, step=0.00001, format="%.5f")
     if has_q:   q     = st.number_input("q — dividend yield", value=0.00, step=0.00001, format="%.5f", min_value=0.0)
 
