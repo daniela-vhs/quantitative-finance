@@ -384,7 +384,7 @@ with st.sidebar:
     if inst_type == "Option / Barrier":
         use_barrier = st.toggle("Add barrier", value=False)
         if use_barrier:
-            H     = st.number_input("H — barrier level", value=62.19, step=1.0)
+            H     = st.number_input("H — barrier level", value=80.0, step=1.0)
             knock = st.radio("Knock", ["out", "in"], horizontal=True)
             d = True
             if abs(H - K) < 1e-8:
