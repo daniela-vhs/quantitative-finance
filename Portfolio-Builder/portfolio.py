@@ -438,7 +438,7 @@ col_s, col_t, col_v = st.columns([2, 3, 1])
 with col_s:
     _s0_default = st.session_state.get("S0", 100.0)
     S0 = st.number_input("S₀ — current spot", value=_s0_default,
-                         step=1.0, key="S0", format="%.2f")
+                         step=5.0, key="S0", format="%.2f")
 with col_t:
     t_frac = st.slider("t — time elapsed (fraction of T)",
                        0.0, 0.999, 0.0, 0.01,
