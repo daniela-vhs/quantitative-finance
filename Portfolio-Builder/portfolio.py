@@ -362,7 +362,7 @@ with st.sidebar:
     inst_type = st.selectbox("Instrument type",
         ["Option / Barrier", "Digital call", "Underlying", "ZCB"])
 
-    qty = st.number_input("qty  (negative = short)", value=1, step=1)
+    qty = st.number_input("qty  (negative = short)", value=100, step=25)
 
     has_K   = inst_type in ("Option / Barrier", "Digital call")
     has_sig = inst_type in ("Option / Barrier", "Digital call")
